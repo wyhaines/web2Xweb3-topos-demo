@@ -263,7 +263,7 @@ BEGIN
         id = ANY (transaction_ids);
 
     -- Send the block creation notification
-    PERFORM pg_notify('block', new_block_id || '::' || new_block_hash);
+    PERFORM pg_notify('block', new_block_id || '::' last_block_id || '::' || new_block_hash || '::' || array_to_string(transaction_ids, ','));
 END;
 $$
 LANGUAGE plpgsql;
