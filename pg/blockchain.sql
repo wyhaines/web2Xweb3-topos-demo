@@ -12,7 +12,7 @@ DROP TABLE IF EXISTS vessels CASCADE;
 
 DROP TABLE IF EXISTS medical_supplies CASCADE;
 
-DROP FUNCTION IF EXISTS generate_hash;
+DROP FUNCTION IF EXISTS generate_hash(data bytea);
 
 DROP FUNCTION IF EXISTS log_transaction;
 
@@ -101,19 +101,33 @@ CREATE OR REPLACE FUNCTION log_transaction ()
     AS $$
 DECLARE
     new_id uuid;
-    row_data text;
+    new_json JSON;
+    old_json JSON;
+    payload text;
 BEGIN
-    -- Convert the row data to a JSON string
-    row_data := row_to_json(NEW)::text;
+    new_json = row_to_json(NEW);
+    old_json = row_to_json(OLD);
+
+    -- Determine the operation type and set the payload accordingly
+    CASE TG_OP
+        WHEN 'INSERT' THEN
+            payload = new_json::text;
+        WHEN 'UPDATE' THEN
+            payload = json_build_object('old', old_json, 'new', new_json)::text;
+        WHEN 'DELETE' THEN
+            payload = old_json::text;
+    END CASE;
 
     -- Insert the transaction record
+    -- It may be overkill to record the _details_ of every transaction, but it's easier to delete this later than to add it later.
     INSERT INTO transactions (operation_type, table_name, transaction_data, transaction_hash)
-        VALUES (TG_OP, TG_TABLE_NAME, row_to_json(NEW), generate_hash (convert_to(row_data, 'UTF8')))
+        VALUES (TG_OP, TG_TABLE_NAME, row_to_json(NEW), generate_hash (convert_to(payload, 'UTF8')))
     RETURNING
         id INTO new_id;
 
     -- Send the transaction notification
-    PERFORM pg_notify('transaction', new_id::text || '::' || TG_TABLE_NAME || '::' || TG_OP || '::' || row_data);
+    -- Ditto here; it may be overkill to send the transaction details in the notification, but it's easy to pare this down later.
+    PERFORM pg_notify('transaction', new_id::text || '::' || TG_TABLE_NAME || '::' || TG_OP || '::' || payload);
 
     -- Return the new row
     RETURN NEW;
