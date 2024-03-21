@@ -19,38 +19,38 @@ contract PgBlockchain {
 
     // Struct to hold transaction details
     struct Transaction {
-        bytes32 id;
+        bytes16 id;
         bytes hash;
     }
 
     // Struct to hold block details, including an array of transaction IDs
     struct Block {
-        bytes32 id;
-        bytes32 previousBlockId;
+        bytes16 id;
+        bytes16 previousBlockId;
         bytes hash;
-        bytes32[] transactionIds;
+        bytes16[] transactionIds;
     }
 
     // State variables to store transactions and blocks
-    mapping(bytes32 => Transaction) public transactions;
-    mapping(bytes32 => Block) public blocks;
+    mapping(bytes16 => Transaction) public transactions;
+    mapping(bytes16 => Block) public blocks;
 
     // Mapping from queryKey to query result
     mapping(bytes32 => string) private results;
 
     // Events for logging
-    event TransactionAdded(bytes32 indexed id, bytes hash);
+    event TransactionAdded(bytes16 indexed id, bytes hash);
     event BlockAdded(
-        bytes32 indexed id,
-        bytes32 previousBlockId,
+        bytes16 indexed id,
+        bytes16 previousBlockId,
         bytes hash,
-        bytes32[] transactionIds
+        bytes16[] transactionIds
     );
 
     // Function to insert a new transaction
-    function insertTransaction(bytes32 _id, bytes calldata _hash) external {
+    function insertTransaction(bytes16 _id, bytes calldata _hash) external {
         require(
-            transactions[_id].id == bytes32(0),
+            transactions[_id].id == bytes16(0),
             "Transaction already exists"
         );
         transactions[_id] = Transaction(_id, _hash);
@@ -59,24 +59,24 @@ contract PgBlockchain {
 
     // Function to get a transaction by ID
     function getTransaction(
-        bytes32 _id
-    ) external view returns (bytes32, bytes memory) {
+        bytes16 _id
+    ) external view returns (bytes16, bytes memory) {
         return (transactions[_id].id, transactions[_id].hash);
     }
 
     // Function to insert a new block
     function insertBlock(
-        bytes32 _id,
-        bytes32 _previousBlockId,
+        bytes16 _id,
+        bytes16 _previousBlockId,
         bytes calldata _hash,
-        bytes32[] calldata _transactionIds
+        bytes16[] calldata _transactionIds
     ) external {
-        require(blocks[_id].id == bytes32(0), "Block already exists");
+        require(blocks[_id].id == bytes16(0), "Block already exists");
 
         // Verify all transactions exist before adding the block
         for (uint i = 0; i < _transactionIds.length; i++) {
             require(
-                transactions[_transactionIds[i]].id != bytes32(0),
+                transactions[_transactionIds[i]].id != bytes16(0),
                 "Transaction does not exist"
             );
         }
@@ -87,8 +87,8 @@ contract PgBlockchain {
 
     // Function to get a block by ID
     function getBlock(
-        bytes32 _id
-    ) external view returns (bytes32, bytes32, bytes memory, bytes32[] memory) {
+        bytes16 _id
+    ) external view returns (bytes16, bytes16, bytes memory, bytes16[] memory) {
         return (
             blocks[_id].id,
             blocks[_id].previousBlockId,
